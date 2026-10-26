@@ -57,7 +57,7 @@ Finally, move the _EWF Acquire GUI.app_ to your **/Applications** folder (or oth
 - Quick test source: `dd if=/dev/urandom of=/Users/Shared/test.raw bs=1m count=64`
 
 ## Image formats
-Only the formats this tool targets are offered: **EWF** (.e01), **EWFX** (.e01) and **S01 / SMART** (.s01).
+The following forensic image formats are offered: **EWF** (.e01), **EWFX** (.e01) and **S01 / SMART** (.s01).
 Default is EWF.
 
 ## .
