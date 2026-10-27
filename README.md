@@ -41,7 +41,9 @@ Finally, move the _EWF Acquire GUI.app_ to your **/Applications** folder (or oth
 
 ## Practical notes
 - If `ewfacquire` reports *Operation not permitted* on the device, grant the app **Full Disk Access**
-  (System Settings → Privacy & Security → Full Disk Access) and retry.
+  (System Settings → Privacy & Security → Full Disk Access) and retry. NB: you must grant Full Disk Access for both the _EWF Acquire GUI_ and also the _ewfacquire_ package, as shown here:
+<img width="479" height="128" alt="FDA" src="https://github.com/user-attachments/assets/1cff1011-db4e-4f31-9f6c-59c9782dca0e" />
+
 - For evidentiary work, use a hardware write blocker. Unmounting volumes reduces accidental writes but is
   not a write block, and macOS can still touch media on attach.
 - The startup disk of recent Macs (SIP / sealed system volume, APFS containers) cannot be imaged
