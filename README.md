@@ -17,7 +17,7 @@ xcode-select --install         # if you don't have Xcode / CLT yet
 chmod +x build_app.sh
 ./build_app.sh                 # native Apple Silicon (arm64) app
 ```
-Finally, move the `EWF Acquire GUI.app` to your `**/Applications**` folder (or other location as you see fit!)
+Finally, move the `EWF Acquire GUI.app` to your `/Applications` folder (or other location as you see fit!)
 
 ## Using it
 1. **Source**: pick a disk (the raw node `/dev/rdiskN` is used), or choose an image file.
