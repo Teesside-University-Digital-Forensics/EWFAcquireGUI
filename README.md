@@ -1,5 +1,5 @@
 # EWF Acquire GUI (WIP)
-GUI front end for _ewfacquire_ on MacOS, running on Apple Silicon (Intel not supported). Always use a Write Blocker!
+GUI front end for `ewfacquire` on MacOS, running on Apple Silicon (Intel not supported). Always use a Write Blocker!
 
 SwiftUI front end for libewf's `ewfacquire`. It lists disks, builds the command line from form fields,
 runs it with administrator rights, and shows live progress and the resulting hashes.
@@ -8,7 +8,7 @@ Requires _libewf_ to be installed separately. _Homebrew_ provides a quick and ea
 ```bash
 brew install libewf            # provides ewfacquire
 ```
-_EWF Acquire GUI_ can be installed from the DMG file provided in the releases section of this repository, or alternatively by downloading the _source_ ZIP file and building using the instructions provided below.
+`EWF Acquire GUI` can be installed from the DMG file provided in the releases section of this repository, or alternatively by downloading the _source_ ZIP file and building using the instructions provided below.
 
 ## Build from source
 Download the _source_ release, extract and open _Terminal_ in that location. Then:
@@ -41,7 +41,7 @@ Finally, move the _EWF Acquire GUI.app_ to your **/Applications** folder (or oth
 
 ## Practical notes
 - If `ewfacquire` reports *Operation not permitted* on the device, grant the app **Full Disk Access**
-  (System Settings → Privacy & Security → Full Disk Access) and retry. NB: you must grant Full Disk Access for both the _EWF Acquire GUI_ and also the _ewfacquire_ package, as shown here:
+  (System Settings → Privacy & Security → Full Disk Access) and retry. NB: you must grant Full Disk Access for both the `EWF Acquire GUI` and also the `ewfacquire` package, as shown here:
 <img width="479" height="128" alt="FDA" src="https://github.com/user-attachments/assets/1cff1011-db4e-4f31-9f6c-59c9782dca0e" />
 
 - For evidentiary work, use a hardware write blocker. Unmounting volumes reduces accidental writes but is
