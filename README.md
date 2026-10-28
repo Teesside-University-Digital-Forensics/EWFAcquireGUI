@@ -72,7 +72,7 @@ NB: **EWFX is NOT Ex01**
 
 ## Acquisition log
 When "Write detailed acquisition log" is ticked (default), `<image>.log` is written alongside the created image file. The log contains:
-1. A statement that the acquisition was produced with EWF Acquire GUI, with its version, plus the
+1. A statement that the acquisition was produced with `EWF Acquire GUI`, with its version, plus the
    `ewfacquire` version, executable path and macOS version.
 2. Source, destination, **case information** (section 3) and **image options** (section 4), including the
    options selected in the advanced settings menu.
