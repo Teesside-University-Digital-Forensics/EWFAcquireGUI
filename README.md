@@ -51,7 +51,7 @@ Finally, move the newly-created `EWF Acquire GUI.app` to your `/Applications` fo
 <img width="479" height="128" alt="FDA" src="https://github.com/user-attachments/assets/1cff1011-db4e-4f31-9f6c-59c9782dca0e" />
 
 - For evidentiary work, use a hardware write blocker. Unmounting volumes reduces accidental writes but is
-  not a write block, and macOS can still touch media on attach.
+  not a write block, and _macOS_ can still touch media on attach.
 - The startup disk of recent Macs (SIP / sealed system volume, APFS containers) cannot be imaged
   meaningfully while running from it. Boot from external media or use target disk mode.
 
