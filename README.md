@@ -1,5 +1,5 @@
 # EWF Acquire GUI (WIP)
-GUI front end for `ewfacquire` on MacOS, running on Apple Silicon (Intel not supported). Always use a Write Blocker!
+GUI front end for `ewfacquire` on _macOS_, running on Apple Silicon (Intel not supported). Always use a Write Blocker!
 
 SwiftUI front end for libewf's `ewfacquire`. It lists disks, builds the command line from form fields,
 runs it with administrator rights, and shows live progress and the resulting hashes.
@@ -31,12 +31,12 @@ Finally, move the newly-created `EWF Acquire GUI.app` to your `/Applications` fo
 3. **Case information**: case number, evidence number, examiner, description, notes (all optional).
 4. **Image options**: format, compression, extra hashes (MD5 is always computed), media type/flags;
    *Advanced* has segment size, chunk size, error granularity, read retries, zero-fill on error, resume, log.
-5. **Start Acquisition**: macOS asks for your admin password; progress and hashes appear below.
+5. **Start Acquisition**: _macOS_ asks for your admin password; progress and hashes appear below.
    *Command preview* shows the exact `ewfacquire` command (copyable) for your case notes.
 
 ## How it works
 - Reading raw devices needs root. The app launches `ewfacquire` through `osascript … with administrator
-  privileges` (the standard macOS password prompt). Only the `ewfacquire` command (and an optional
+  privileges` (the standard _macOS_ password prompt). Only the `ewfacquire` command (and an optional
   `diskutil unmountDisk`) runs as root; the GUI itself does not.
 - Output is written to a private temp log (`0700` folder) that the app tails for progress.
 - **Cancel** creates a flag file the root wrapper watches; it then sends `SIGTERM` to `ewfacquire`
