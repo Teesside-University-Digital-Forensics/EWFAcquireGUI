@@ -202,8 +202,7 @@ struct ContentView: View {
                     }
                     .padding(.top, 6)
                     Toggle("Zero-fill unreadable sectors (-w)", isOn: $m.settings.zeroOnError)
-                    Toggle("Resume interrupted acquisition (-R)", isOn: $m.settings.resume)
-                    Toggle("Write ewfacquire log next to the image", isOn: $m.settings.writeLog)
+                    Toggle("Write detailed acquisition log next to the image (.log)", isOn: $m.settings.writeLog)
                 }
 
                 HStack {
@@ -227,6 +226,7 @@ struct ContentView: View {
     private var statusColor: Color {
         switch m.phase {
         case .succeeded: return .green
+        case .cancelled: return .orange
         case .failed: return .red
         default: return .secondary
         }

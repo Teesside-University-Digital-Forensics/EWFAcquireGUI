@@ -3,8 +3,8 @@ import AppKit
 /// Single source of truth for version information.
 /// build_app.sh reads `version` and `build` from this file for Info.plist.
 enum AppInfo {
-    static let version = "0.1"
-    static let build = "20261027"
+    static let version = "0.2"
+    static let build = "20261028"
     static let displayVersion = "v\(version) (\(build))"
 
     static let name = "EWF Acquire GUI"
@@ -25,7 +25,7 @@ enum AppInfo {
 
         let options: [NSApplication.AboutPanelOptionKey: Any] = [
             .applicationName: name,
-            .applicationVersion: version,   // shown as "Version 0.1 (20261027)"
+            .applicationVersion: version,   // shown as "Version 0.2 (20261028)"
             .version: build,
             .credits: credits
         ]

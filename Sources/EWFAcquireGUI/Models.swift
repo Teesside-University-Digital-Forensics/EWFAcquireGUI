@@ -179,7 +179,6 @@ struct AcquireSettings {
     var errorGranularity = 64
     var readRetries = 2
     var zeroOnError = true
-    var resume = false
     var writeLog = true
 
     var caseNumber = ""
@@ -201,7 +200,7 @@ struct AcquireSettings {
     }
 
     /// `newCompressionSyntax`: libewf >= 2014 expects "method:level" (e.g. deflate:fast).
-    func arguments(newCompressionSyntax: Bool) -> [String] {
+    func arguments(newCompressionSyntax: Bool, logPath: String? = nil) -> [String] {
         var a = ["-u",                                   // unattended: never prompt
                  "-t", targetBase,
                  "-f", format.rawValue,
@@ -215,8 +214,7 @@ struct AcquireSettings {
         if digest != .none { a += ["-d", digest.rawValue] }
         if let bytes = segment.bytes { a += ["-S", String(bytes)] }
         if zeroOnError { a.append("-w") }
-        if resume { a.append("-R") }
-        if writeLog { a += ["-l", targetBase + ".log"] }
+        if writeLog { a += ["-l", logPath ?? (targetBase + ".log")] }
 
         let meta: [(String, String)] = [("-C", caseNumber), ("-E", evidenceNumber),
                                         ("-e", examiner), ("-D", description), ("-N", notes)]
@@ -232,7 +230,6 @@ struct AcquireSettings {
 // MARK: - Saved defaults for section 4 (Image options)
 
 /// The options a user can store as their personal defaults.
-/// `resume` is deliberately excluded: it bypasses the "image already exists" check.
 struct ImageDefaults: Codable, Equatable {
     var format = EWFFormat.ewf
     var compression = CompressionLevel.fast

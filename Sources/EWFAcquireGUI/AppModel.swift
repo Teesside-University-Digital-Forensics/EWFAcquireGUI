@@ -4,7 +4,7 @@ import AppKit
 @MainActor
 final class AppModel: ObservableObject {
     enum Phase: Equatable {
-        case idle, running, cancelling, succeeded, failed(String)
+        case idle, running, cancelling, succeeded, cancelled, failed(String)
     }
 
     // Configuration
@@ -38,6 +38,15 @@ final class AppModel: ObservableObject {
     private var logOffset: UInt64 = 0
     private var pending = ""
     private var pollTask: Task<Void, Never>?
+    private var finalLogPath: String?
+    private var toolVerdict: String?   // ewfacquire's own final line: SUCCESS / FAILURE / ABORTED
+
+    /// Files used to assemble the enhanced <image>.log.
+    private struct ReportPaths {
+        let header: String   // header written by the app before the run
+        let ewfLog: String   // ewfacquire's own -l log (temporary)
+        let final: String    // <image>.log
+    }
 
     var isBusy: Bool { phase == .running || phase == .cancelling }
 
@@ -207,11 +216,9 @@ final class AppModel: ObservableObject {
         s.imageName = name
         settings.imageName = name
 
-        if !s.resume {
-            for ext in ["E01", "e01", "s01", "Ex01"] where fm.fileExists(atPath: s.targetBase + "." + ext) {
-                alertMessage = "An image named “\(name)” already exists in that folder. Choose another name."
-                return
-            }
+        for ext in ["E01", "e01", "s01", "Ex01"] where fm.fileExists(atPath: s.targetBase + "." + ext) {
+            alertMessage = "An image named “\(name)” already exists in that folder. Choose another name."
+            return
         }
 
         let dir = s.targetDirectory
@@ -269,12 +276,35 @@ final class AppModel: ObservableObject {
         logLines = []
         hashes = []
         permissionHint = false
+        toolVerdict = nil
         phase = .running
 
-        let command = ([toolPath] + s.arguments(newCompressionSyntax: newCompressionSyntax))
+        // Enhanced acquisition log: ewfacquire's own -l log goes to a temporary file, and the
+        // wrapper script merges header + run details + ewfacquire output into <image>.log.
+        var report: ReportPaths?
+        var ewfLogOverride: String?
+        finalLogPath = nil
+        if s.writeLog {
+            let headerPath = dir.appendingPathComponent("header.txt").path
+            let ewfLog = dir.appendingPathComponent("ewfacquire.log").path
+            let disk = disks.first { $0.devicePath == s.sourcePath }
+            let header = AcquisitionLog.header(
+                settings: s, toolPath: toolPath, toolVersion: toolVersion,
+                command: commandPreview,
+                sourceDescription: disk.map { "\($0.name), \($0.sizeString)" })
+            try? header.write(toFile: headerPath, atomically: true, encoding: .utf8)
+            let final = s.targetBase + ".log"
+            report = ReportPaths(header: headerPath, ewfLog: ewfLog, final: final)
+            ewfLogOverride = ewfLog
+            finalLogPath = final
+        }
+
+        let command = ([toolPath] + s.arguments(newCompressionSyntax: newCompressionSyntax,
+                                                logPath: ewfLogOverride))
             .map(Shell.quote).joined(separator: " ")
         let outer = Self.privilegedScript(command: command, log: logPath, cancel: cancelPath,
-                                          unmountDisk: s.unmountSource ? s.sourceWholeDisk : nil)
+                                          unmountDisk: s.unmountSource ? s.sourceWholeDisk : nil,
+                                          report: report)
 
         Task.detached { [weak self] in
             let p = Process()
@@ -309,18 +339,75 @@ final class AppModel: ObservableObject {
 
     /// Runs as root in the background. Output goes to a user-owned log file;
     /// creating the cancel flag file (also user-owned) makes it stop ewfacquire.
+    /// When `report` is set, the final <image>.log is assembled here (not in the app) so it
+    /// is completed even if the app is closed during the acquisition.
     private static func privilegedScript(command: String, log: String, cancel: String,
-                                         unmountDisk: String?) -> String {
-        var lines = ["LOG=\(Shell.quote(log))", "CANCEL=\(Shell.quote(cancel))"]
-        if let disk = unmountDisk {
-            lines.append("/usr/sbin/diskutil unmountDisk /dev/\(disk) >>\"$LOG\" 2>&1 || { echo 'EXIT_CODE=99' >>\"$LOG\"; exit 99; }")
+                                         unmountDisk: String?, report: ReportPaths?) -> String {
+        let q = Shell.quote
+        var l = ["LOG=\(q(log))", "CANCEL=\(q(cancel))"]
+        if let r = report {
+            l += ["HEADER=\(q(r.header))", "EWFLOG=\(q(r.ewfLog))", "FINAL=\(q(r.final))"]
         }
-        lines.append("\(command) >>\"$LOG\" 2>&1 </dev/null &")
-        lines.append("P=$!")
-        lines.append("while kill -0 $P 2>/dev/null; do if [ -e \"$CANCEL\" ]; then kill -TERM $P; break; fi; sleep 1; done")
-        lines.append("wait $P; echo \"EXIT_CODE=$?\" >>\"$LOG\"")
-        let inner = lines.joined(separator: "\n")
-        return "/bin/sh -c \(Shell.quote(inner)) >/dev/null 2>&1 &"
+        l.append("START_LOCAL=$(date '+%Y-%m-%d %H:%M:%S %Z')")
+        l.append("START_UTC=$(date -u '+%Y-%m-%d %H:%M:%S UTC')")
+
+        if let disk = unmountDisk {
+            l.append("if /usr/sbin/diskutil unmountDisk /dev/\(disk) >>\"$LOG\" 2>&1; then")
+        } else {
+            l.append("if true; then")
+        }
+        l.append("\(command) >>\"$LOG\" 2>&1 </dev/null &")
+        l.append("P=$!")
+        // Cancel: ask ewfacquire to stop (SIGTERM); if it is stuck (e.g. a hung USB read), force it after 15 s.
+        l += [
+            "while kill -0 $P 2>/dev/null; do",
+            "if [ -e \"$CANCEL\" ]; then",
+            "kill -TERM $P; N=0",
+            "while kill -0 $P 2>/dev/null && [ $N -lt 15 ]; do sleep 1; N=$((N+1)); done",
+            "if kill -0 $P 2>/dev/null; then kill -KILL $P; fi",
+            "break",
+            "fi",
+            "sleep 1",
+            "done",
+        ]
+        l.append("wait $P; RC=$?")
+        l.append("else RC=99; fi")
+
+        if report != nil {
+            l += [
+                "END_LOCAL=$(date '+%Y-%m-%d %H:%M:%S %Z')",
+                "END_UTC=$(date -u '+%Y-%m-%d %H:%M:%S UTC')",
+                "if [ $RC -eq 0 ]; then RESULT='Completed successfully'",
+                "elif [ -e \"$CANCEL\" ]; then RESULT='Cancelled by the user (partial image left in place)'",
+                "elif [ $RC -eq 99 ]; then RESULT='Failed: the source volumes could not be unmounted'",
+                "else RESULT='Failed'; fi",
+                "{",
+                "cat \"$HEADER\"",
+                "echo",
+                "echo 'Run details'",
+                "echo '-----------'",
+                "echo \"Acquisition started:   $START_LOCAL ($START_UTC)\"",
+                "echo \"Acquisition finished:  $END_LOCAL ($END_UTC)\"",
+                "echo \"Result:                $RESULT (ewfacquire exit code $RC)\"",
+                "echo",
+                "echo 'ewfacquire log (written by ewfacquire via -l)'",
+                "echo '---------------------------------------------'",
+                "cat \"$EWFLOG\" 2>/dev/null || echo '(ewfacquire did not produce a log)'",
+                "echo",
+                "echo 'ewfacquire console output (progress lines removed)'",
+                "echo '--------------------------------------------------'",
+                "tr '\\r' '\\n' <\"$LOG\" | grep -Ev '^[[:space:]]*(Status: at|acquired|completion in)|^[[:space:]]*$'",
+                "echo",
+                "echo",
+                "} >>\"$FINAL\" 2>/dev/null",
+                "/usr/sbin/chown \(getuid()) \"$FINAL\" 2>/dev/null",
+            ]
+        }
+        // Written last: the app treats this line as "finished" and then deletes its temp files.
+        l.append("echo \"EXIT_CODE=$RC\" >>\"$LOG\"")
+
+        let inner = l.joined(separator: "\n")
+        return "/bin/sh -c \(q(inner)) >/dev/null 2>&1 &"
     }
 
     private func launchFailed(_ message: String) {
@@ -385,27 +472,34 @@ final class AppModel: ObservableObject {
             hashes.append((name: g[0], value: g[1]))
         }
         if line.contains("Operation not permitted") { permissionHint = true }
+        if let g = regexGroups(#"^ewfacquire: (SUCCESS|FAILURE|ABORTED)"#, in: line) { toolVerdict = g[0] }
         logLines.append(line)
         if logLines.count > 2000 { logLines.removeFirst(500) }
     }
 
     private func finish(code: Int) {
         pollTask?.cancel()
-        switch code {
-        case 0:
+
+        // Never judge by the exit code alone. ewfacquire handles the stop signal itself and
+        // exits with status 1 (not 143), so a cancel must also be recognised from the fact that
+        // the user asked for it and from ewfacquire's own verdict line.
+        let userCancelled = (phase == .cancelling)
+        let verdict = toolVerdict   // "SUCCESS", "FAILURE", "ABORTED" or nil
+
+        if code == 0, verdict == nil || verdict == "SUCCESS" {
             progress = 1
             phase = .succeeded
-            statusText = "Acquisition completed successfully."
-        case 143, 15:
-            phase = .failed("Acquisition cancelled. The partial image was left in place.")
-            statusText = "Cancelled."
-        case 99:
+            statusText = "Acquisition completed successfully." + (finalLogPath.map { " Log: \($0)" } ?? "")
+        } else if userCancelled || verdict == "ABORTED" || code == 143 || code == 15 {
+            phase = .cancelled
+            statusText = "Acquisition cancelled. The partial image was left in place."
+        } else if code == 99 {
             phase = .failed("The source disk could not be unmounted (is it in use?). Nothing was acquired.")
             statusText = "Unmount failed."
-        default:
+        } else {
             phase = .failed(permissionHint
                 ? "macOS blocked access to a file or device (“Operation not permitted”)."
-                : "ewfacquire exited with code \(code). See the log for details.")
+                : "ewfacquire failed (exit code \(code)). See the log for details.")
             statusText = "Failed."
         }
         NSApp.requestUserAttention(.informationalRequest)
