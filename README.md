@@ -56,7 +56,7 @@ Finally, move the newly-created `EWF Acquire GUI.app` to your `/Applications` fo
   meaningfully while running from it. Boot from external media or use target disk mode.
 
 ## Troubleshooting
-- **"Operation not permitted" from ewfacquire**: macOS privacy protection (TCC) is blocking the root process.
+- **"Operation not permitted" from ewfacquire**: _macOS_ privacy protection (TCC) is blocking the root process.
   Add the app you launched from (EWF Acquire GUI.app, or Terminal/iTerm when using `swift run`) under
   System Settings → Privacy & Security → Full Disk Access, then quit and reopen it. Downloads, Desktop and
   Documents are protected folders; `/Users/Shared` is not, which makes it handy for test files.
