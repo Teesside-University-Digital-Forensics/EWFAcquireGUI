@@ -4,7 +4,7 @@ GUI front end for `ewfacquire` on MacOS, running on Apple Silicon (Intel not sup
 SwiftUI front end for libewf's `ewfacquire`. It lists disks, builds the command line from form fields,
 runs it with administrator rights, and shows live progress and the resulting hashes.
 
-Requires _libewf_ to be installed separately. _Homebrew_ provides a quick and easy way to do this:
+Requires _libewf_ to be installed separately. _Homebrew_ provides a quick and easy way to do this (other methods are available):
 ```bash
 brew install libewf            # provides ewfacquire
 ```
